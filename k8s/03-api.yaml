@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amscp-api
+  namespace: amscp
+  labels:
+    app: amscp-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: amscp-api
+  template:
+    metadata:
+      labels:
+        app: amscp-api
+    spec:
+      containers:
+        - name: api
+          image: amscp-api:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: amscp-config
+            - secretRef:
+                name: amscp-secret
+          volumeMounts:
+            - name: api-data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: api-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amscp-api
+  namespace: amscp
+spec:
+  selector:
+    app: amscp-api
+  type: NodePort
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080

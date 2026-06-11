@@ -1,0 +1,20 @@
+{
+  "name": "material-passport-chaincode",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric smart contract for advanced materials provenance, quality certification, and ESG traceability.",
+  "main": "index.js",
+  "scripts": {
+    "start": "fabric-chaincode-node start",
+    "lint": "eslint . || true"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.4",
+    "fabric-shim": "^2.5.4"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

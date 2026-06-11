@@ -1,0 +1,12 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: amscp
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8000
+        protocol: TCP
+      - containerPort: 30920
+        hostPort: 9200
+        protocol: TCP

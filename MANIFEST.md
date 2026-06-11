@@ -1,0 +1,120 @@
+# AMSCP Simple Exam-Ready Codebase Manifest
+
+Generated package kept close to the provided amscp_rebuilt_exam_ready codebase.
+
+Main changes:
+- simple flat sample_data image dataset
+- TensorFlow QC relevant-file update
+- Docker Compose TensorFlow build context update
+- master runbook update
+- Fabric Git Bash env guards inside the existing Fabric scripts
+
+Files:
+- .env.example
+- .github/workflows/ci.yml
+- .gitignore
+- Dockerfile
+- MANIFEST.md
+- MASTER_RUNBOOK.md
+- Makefile
+- README.md
+- analytics/spark_esg_batch.py
+- ansible/inventory.example.ini
+- ansible/site.yml
+- app/__init__.py
+- app/auth.py
+- app/blockchain.py
+- app/compliance.py
+- app/db.py
+- app/iot.py
+- app/main.py
+- app/qc.py
+- app/risk.py
+- app/schemas.py
+- app/search.py
+- app/seed.py
+- app/settings.py
+- app/sustainability.py
+- app/threat_detection.py
+- blockchain/ethereum/MaterialPassport.sol
+- docker-compose.yml
+- docs/ARCHITECTURE_AND_VIVA_GUIDE.md
+- docs/COMPLETE_PROJECT_TREE.md
+- docs/FILE_BY_FILE_CODE_WALKTHROUGH.md
+- docs/MASTER_RUNBOOK_FROM_EXTRACTED_ZIP.md
+- docs/TROUBLESHOOTING_AND_COMMON_ERRORS.md
+- docs/data_flow_diagram.mmd
+- docs/level6_enterprise_architecture.md
+- docs/level6_enterprise_architecture.mmd
+- docs/security_architecture.mmd
+- docs/system_architecture.mmd
+- docs/topic116_coverage_matrix.md
+- docs/topic116_full_architecture.mmd
+- docs/workflow_demo.mmd
+- fabric/README.md
+- fabric/chaincode/material-passport/javascript/index.js
+- fabric/chaincode/material-passport/javascript/lib/materialPassportContract.js
+- fabric/chaincode/material-passport/javascript/package.json
+- fabric/scripts/bootstrap_test_network.sh
+- fabric/scripts/deploy_material_passport.sh
+- fabric/scripts/invoke_material_demo.sh
+- iot/mosquitto.conf
+- k8s/00-namespace.yaml
+- k8s/01-configmap.yaml
+- k8s/03-api.yaml
+- k8s/04-elasticsearch.yaml
+- k8s/05-tensorflow-qc.yaml
+- k8s/06-networkpolicy.yaml
+- k8s/07-hpa.yaml
+- k8s/README.md
+- k8s/deploy-kind.sh
+- k8s/kind-config.yaml
+- observability/prometheus.yml
+- requirements.txt
+- sample_data/defective_material.png
+- sample_data/defective_material_01.png
+- sample_data/defective_material_02.png
+- sample_data/defective_material_03.png
+- sample_data/defective_material_04.png
+- sample_data/defective_material_05.png
+- sample_data/defective_material_06.png
+- sample_data/defective_material_07.png
+- sample_data/defective_material_08.png
+- sample_data/defective_material_09.png
+- sample_data/defective_material_10.png
+- sample_data/defective_material_11.png
+- sample_data/defective_material_12.png
+- sample_data/good_material.png
+- sample_data/good_material_01.png
+- sample_data/good_material_02.png
+- sample_data/good_material_03.png
+- sample_data/good_material_04.png
+- sample_data/good_material_05.png
+- sample_data/good_material_06.png
+- sample_data/good_material_07.png
+- sample_data/good_material_08.png
+- sample_data/good_material_09.png
+- sample_data/good_material_10.png
+- sample_data/good_material_11.png
+- sample_data/good_material_12.png
+- sample_data/labels.csv
+- scripts/create_project_structure.cmd
+- scripts/generate_samples.py
+- scripts/init_env.ps1
+- scripts/init_env.sh
+- scripts/lib/load_env.ps1
+- scripts/lib/load_env.sh
+- scripts/opcua_to_mes_gateway.py
+- scripts/publish_mqtt_demo.py
+- scripts/run_demo.ps1
+- scripts/run_demo.sh
+- scripts/run_level6_integrations_demo.ps1
+- scripts/run_level6_integrations_demo.sh
+- services/pytorch-qc/Dockerfile
+- services/pytorch-qc/main.py
+- services/pytorch-qc/requirements.txt
+- services/tensorflow-qc/Dockerfile
+- services/tensorflow-qc/main.py
+- services/tensorflow-qc/requirements.txt
+- tests/test_core.py
+- tests/test_topic116_coverage.py

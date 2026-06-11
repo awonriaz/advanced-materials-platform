@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amscp-config
+  namespace: amscp
+data:
+  APP_ENV: "kubernetes-demo"
+  DB_PATH: "/app/data/amscp.db"
+  MAX_UPLOAD_MB: "8"
+  QC_FAIL_THRESHOLD: "32.0"
+  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  SEARCH_INDEX: "material-passports"
+  TENSORFLOW_QC_URL: "http://tensorflow-qc:8501"

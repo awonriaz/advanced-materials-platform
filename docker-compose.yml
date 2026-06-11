@@ -1,0 +1,100 @@
+services:
+  amscp-api:
+    build: .
+    container_name: amscp-api
+    env_file:
+      - .env
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      TENSORFLOW_QC_URL: http://tensorflow-qc:8501
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: amscp-elasticsearch
+    profiles: ["search", "full"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  tensorflow-qc:
+    build:
+      context: .
+      dockerfile: services/tensorflow-qc/Dockerfile
+    container_name: amscp-tensorflow-qc
+    profiles: ["tensorflow", "full"]
+    environment:
+      MODEL_PATH: /app/models/material_qc.keras
+      DATASET_DIR: /app/sample_data
+      IMG_SIZE: "128"
+      DEFECT_THRESHOLD: "0.60"
+    ports:
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  pytorch-qc:
+    build: ./services/pytorch-qc
+    container_name: amscp-pytorch-qc
+    profiles: ["pytorch"]
+    ports:
+      - "127.0.0.1:8601:8601"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8601/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: amscp-prometheus
+    profiles: ["monitoring", "full-plus"]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: amscp-mosquitto
+    profiles: ["iot", "full-plus"]
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./iot/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+volumes:
+  esdata:
+  prometheusdata:
