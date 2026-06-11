@@ -2,35 +2,135 @@
 - name: Deploy AMSCP demo stack on EC2
   hosts: amscp
   become: true
+  gather_facts: true
+
   vars:
+    app_user: ubuntu
+    app_group: ubuntu
     app_dir: /opt/amscp
+    repo_url: "https://github.com/awonriaz/advanced-materials-platform.git"
+    repo_branch: main
+    compose_profile: full
+
   tasks:
-    - name: Install packages
-      apt:
+    - name: Update apt cache and install required packages
+      ansible.builtin.apt:
         name:
           - git
           - docker.io
           - docker-compose-plugin
           - python3
           - python3-pip
+          - python3-venv
+          - curl
+          - ca-certificates
         update_cache: true
         state: present
 
-    - name: Add ubuntu user to docker group
-      user:
-        name: ubuntu
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add application user to docker group
+      ansible.builtin.user:
+        name: "{{ app_user }}"
         groups: docker
         append: true
 
     - name: Create application directory
-      file:
+      ansible.builtin.file:
         path: "{{ app_dir }}"
         state: directory
-        owner: ubuntu
-        group: ubuntu
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
         mode: "0750"
 
-    # Copy/clone your repository separately. Secrets are not stored in Ansible.
-    - name: Show next deployment command
-      debug:
-        msg: "Clone repo into {{ app_dir }}, run scripts/init_env.sh, then docker compose --profile full up -d --build"
+    - name: Clone or update AMSCP repository
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_branch }}"
+        force: true
+        update: true
+      become_user: "{{ app_user }}"
+
+    - name: Ensure data and model directories exist
+      ansible.builtin.file:
+        path: "{{ app_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0750"
+      loop:
+        - data
+        - models
+        - sample_data
+
+    - name: Create secure .env using project script
+      ansible.builtin.command: bash scripts/init_env.sh
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Generate current flat sample image dataset
+      ansible.builtin.command: python3 scripts/generate_samples.py
+      args:
+        chdir: "{{ app_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Build and start Docker Compose full profile
+      ansible.builtin.command: docker compose --profile "{{ compose_profile }}" up -d --build
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Show Docker Compose status
+      ansible.builtin.command: docker compose --profile "{{ compose_profile }}" ps
+      args:
+        chdir: "{{ app_dir }}"
+      register: compose_ps
+      changed_when: false
+
+    - name: Print Docker Compose status
+      ansible.builtin.debug:
+        var: compose_ps.stdout_lines
+
+    - name: Wait for AMSCP API health
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/health
+        method: GET
+        status_code: 200
+      register: api_health
+      retries: 30
+      delay: 5
+      until: api_health.status == 200
+
+    - name: Wait for TensorFlow QC health
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8501/health
+        method: GET
+        status_code: 200
+      register: tf_health
+      retries: 30
+      delay: 5
+      until: tf_health.status == 200
+
+    - name: Wait for Elasticsearch
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9200
+        method: GET
+        status_code: 200
+      register: es_health
+      retries: 30
+      delay: 5
+      until: es_health.status == 200
+
+    - name: Final deployment message
+      ansible.builtin.debug:
+        msg:
+          - "AMSCP deployed successfully on EC2."
+          - "Internal API health: http://127.0.0.1:8000/health"
+          - "External API demo URL: http://{{ inventory_hostname }}:8000/health"
+          - "Run the exam workflow on EC2 with:"
+          - "cd {{ app_dir }} && bash scripts/run_level6_integrations_demo.sh"
