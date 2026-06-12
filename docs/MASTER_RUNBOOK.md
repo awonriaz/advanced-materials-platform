@@ -220,7 +220,7 @@ X-Role: admin
 Spark path demonstrates enterprise-scale ESG aggregation separately from the live FastAPI ESG endpoint.
 
 ```bash
-python analytics/spark_esg_batch.py
+spark-submit analytics/spark_esg_batch.py data/carbon_events.csv
 ```
 
 Explanation:
