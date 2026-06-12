@@ -7,6 +7,22 @@ function stableHash(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
+function txTimestamp(ctx) {
+  const ts = ctx.stub.getTxTimestamp();
+  let seconds = ts.seconds;
+
+  if (typeof seconds === 'object') {
+    if (typeof seconds.toNumber === 'function') {
+      seconds = seconds.toNumber();
+    } else {
+      seconds = (seconds.high || 0) * 0x100000000 + (seconds.low >>> 0);
+    }
+  }
+
+  const millis = Number(seconds) * 1000 + Math.floor(Number(ts.nanos || 0) / 1000000);
+  return new Date(millis).toISOString();
+}
+
 class MaterialPassportContract extends Contract {
   async InitLedger(ctx) {
     const seedPassport = {
@@ -20,7 +36,7 @@ class MaterialPassportContract extends Contract {
       custodyEvents: [],
       esgEvents: [],
       complianceCertificates: ['ISO-9001-DEMO', 'ISO-14001-DEMO'],
-      createdAt: new Date().toISOString()
+      createdAt: txTimestamp(ctx)
     };
     seedPassport.documentHash = stableHash(seedPassport);
     await ctx.stub.putState(seedPassport.lotId, Buffer.from(JSON.stringify(seedPassport)));
@@ -46,10 +62,10 @@ class MaterialPassportContract extends Contract {
       currentOwner: owner,
       lifecycleStatus: 'CREATED',
       qualityEvents: [],
-      custodyEvents: [{ from: 'SOURCE', to: owner, location: 'Origin', timestamp: new Date().toISOString() }],
+      custodyEvents: [{ from: 'SOURCE', to: owner, location: 'Origin', timestamp: txTimestamp(ctx) }],
       esgEvents: [],
       complianceCertificates: certificates,
-      createdAt: new Date().toISOString()
+      createdAt: txTimestamp(ctx)
     };
     passport.documentHash = stableHash(passport);
     await ctx.stub.putState(lotId, Buffer.from(JSON.stringify(passport)));
@@ -64,7 +80,7 @@ class MaterialPassportContract extends Contract {
       defectProbability: Number(defectProbability),
       imageHash,
       modelName,
-      timestamp: new Date().toISOString()
+      timestamp: txTimestamp(ctx)
     };
     passport.qualityEvents.push(qualityEvent);
     passport.lifecycleStatus = result === 'PASS' ? 'QUALITY_APPROVED' : 'QUALITY_HOLD';
@@ -83,7 +99,7 @@ class MaterialPassportContract extends Contract {
       to: toOwner,
       location,
       transportMode,
-      timestamp: new Date().toISOString()
+      timestamp: txTimestamp(ctx)
     };
     passport.currentOwner = toOwner;
     passport.custodyEvents.push(custodyEvent);
@@ -100,7 +116,7 @@ class MaterialPassportContract extends Contract {
       energyKwh: Number(energyKwh),
       waterLitres: Number(waterLitres),
       wasteKg: Number(wasteKg),
-      timestamp: new Date().toISOString()
+      timestamp: txTimestamp(ctx)
     };
     passport.esgEvents.push(esgEvent);
     passport.documentHash = stableHash(passport);
@@ -111,7 +127,7 @@ class MaterialPassportContract extends Contract {
   async ValidateCertification(ctx, lotId, requiredCertificate) {
     const passport = await this._read(ctx, lotId);
     const valid = passport.complianceCertificates.includes(requiredCertificate);
-    return JSON.stringify({ lotId, requiredCertificate, valid, checkedAt: new Date().toISOString() });
+    return JSON.stringify({ lotId, requiredCertificate, valid, checkedAt: txTimestamp(ctx) });
   }
 
   async ReadPassport(ctx, lotId) {
