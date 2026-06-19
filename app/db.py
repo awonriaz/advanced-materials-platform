@@ -122,11 +122,12 @@ CREATE TABLE IF NOT EXISTS threat_signals (
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor TEXT NOT NULL,
+    role TEXT NOT NULL,
     action TEXT NOT NULL,
     resource TEXT NOT NULL,
     success INTEGER NOT NULL,
     detail_json TEXT NOT NULL,
-    timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -167,9 +168,16 @@ def json_loads(value: str | None) -> Any:
     return json.loads(value)
 
 
-def audit(actor: str, action: str, resource: str, success: bool, detail: dict[str, Any]) -> None:
+def audit(
+    actor: str,
+    role: str,
+    action: str,
+    resource: str,
+    success: bool,
+    detail: dict[str, Any]
+) -> None:
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO audit_logs(actor, action, resource, success, detail_json) VALUES (?, ?, ?, ?, ?)",
-            (actor, action, resource, 1 if success else 0, json_dumps(detail)),
+            "INSERT INTO audit_logs(actor, role, action, resource, success, detail_json) VALUES (?, ?, ?, ?, ?, ?)",
+            (actor, role, action, resource, 1 if success else 0, json_dumps(detail)),
         )

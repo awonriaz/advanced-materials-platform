@@ -94,17 +94,17 @@ def create_material(payload: MaterialCreate, identity: dict[str, str] = Depends(
             location=payload.metadata.get("location", "Mumbai"),
             payload=payload.model_dump(),
         )
-        audit(identity["actor"], "create_material", payload.lot_id, True, {"event_hash": chain_event["event_hash"]})
+        audit(identity["actor"], identity["role"], "create_material", payload.lot_id, True, {"event_hash": chain_event["event_hash"]})
         return {"material": payload.model_dump(), "trace_event": chain_event}
     except Exception as exc:
-        audit(identity["actor"], "create_material", payload.lot_id, False, {"error": str(exc)})
+        audit(identity["actor"], identity["role"], "create_material", payload.lot_id, False, {"error": str(exc)})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/v1/materials/{lot_id}/passport")
 def get_material_passport(lot_id: str, identity: dict[str, str] = Depends(require_api_key)) -> dict[str, Any]:
     passport = _build_passport(lot_id)
-    audit(identity["actor"], "read_passport", lot_id, True, {})
+    audit(identity["actor"], identity["role"], "read_passport", lot_id, True, {})
     return passport
 
 
@@ -114,7 +114,7 @@ def sync_passport_to_elasticsearch(lot_id: str, identity: dict[str, str] = Depen
     passport = _build_passport(lot_id)
     result = index_passport(passport)
     ok = bool(result.get("index_response", {}).get("result") in {"created", "updated"} or result.get("index_response", {}).get("_id"))
-    audit(identity["actor"], "sync_passport_to_elasticsearch", lot_id, ok, {"elasticsearch": result.get("index_response")})
+    audit(identity["actor"], identity["role"], "sync_passport_to_elasticsearch", lot_id, ok, {"elasticsearch": result.get("index_response")})
     return result
 
 
@@ -122,7 +122,7 @@ def sync_passport_to_elasticsearch(lot_id: str, identity: dict[str, str] = Depen
 def search_materials(q: str, size: int = 10, identity: dict[str, str] = Depends(require_api_key)) -> dict[str, Any]:
     require_role(identity, {"admin", "supply-chain-manager", "qa-engineer", "sustainability-analyst", "risk-analyst", "security-analyst"})
     result = search_passports(q, size)
-    audit(identity["actor"], "search_materials", q, bool(result.get("hits") or result.get("enabled") is False), {"query": q})
+    audit(identity["actor"], identity["role"], "search_materials", q, bool(result.get("hits") or result.get("enabled") is False), {"query": q})
     return result
 
 
@@ -139,7 +139,7 @@ def create_trace_event(payload: TraceEventCreate, identity: dict[str, str] = Dep
         location=payload.location,
         payload=payload.payload,
     )
-    audit(identity["actor"], "create_trace_event", payload.lot_id, True, {"event_hash": event["event_hash"]})
+    audit(identity["actor"], identity["role"], "create_trace_event", payload.lot_id, True, {"event_hash": event["event_hash"]})
     return event
 
 
@@ -174,7 +174,7 @@ async def inspect_quality(lot_id: str, file: UploadFile = File(...), identity: d
         location="QC Lab",
         payload={"filename": file.filename, **result},
     )
-    audit(identity["actor"], "inspect_quality", lot_id, True, {"result": result["result"], "event_hash": chain_event["event_hash"]})
+    audit(identity["actor"], identity["role"], "inspect_quality", lot_id, True, {"result": result["result"], "event_hash": chain_event["event_hash"]})
     return {"lot_id": lot_id, "inspection": result, "trace_event": chain_event}
 
 
@@ -231,7 +231,7 @@ async def inspect_quality_with_tensorflow(lot_id: str, file: UploadFile = File(.
         location="TensorFlow QC Service",
         payload=tf_result,
     )
-    audit(identity["actor"], "tensorflow_inspect_quality", lot_id, True, {"result": tf_result["result"], "event_hash": chain_event["event_hash"]})
+    audit(identity["actor"], identity["role"], "tensorflow_inspect_quality", lot_id, True, {"result": tf_result["result"], "event_hash": chain_event["event_hash"]})
     return {"lot_id": lot_id, "tensorflow_inspection": tf_result, "trace_event": chain_event}
 
 
@@ -254,13 +254,13 @@ def add_carbon_event(payload: CarbonEventCreate, identity: dict[str, str] = Depe
         payload=payload.model_dump(),
     )
     summary = lot_esg_summary(payload.lot_id)
-    audit(identity["actor"], "add_carbon_event", payload.lot_id, True, {"event_hash": event["event_hash"]})
+    audit(identity["actor"], identity["role"], "add_carbon_event", payload.lot_id, True, {"event_hash": event["event_hash"]})
     return {"summary": summary, "trace_event": event}
 
 
 @app.get("/api/v1/esg/summary/{lot_id}")
 def esg_summary(lot_id: str, identity: dict[str, str] = Depends(require_api_key)) -> dict[str, Any]:
-    audit(identity["actor"], "read_esg_summary", lot_id, True, {})
+    audit(identity["actor"], identity["role"], "read_esg_summary", lot_id, True, {})
     return lot_esg_summary(lot_id)
 
 
@@ -295,7 +295,7 @@ def risk_assessment(payload: RiskAssessRequest, identity: dict[str, str] = Depen
                 location="Risk Engine",
                 payload={**payload.model_dump(), **result},
             )
-    audit(identity["actor"], "risk_assessment", payload.lot_id or "unlinked", True, result)
+    audit(identity["actor"], identity["role"], "risk_assessment", payload.lot_id or "unlinked", True, result)
     return {"assessment": {**payload.model_dump(), **result}, "trace_event": trace_event}
 
 
@@ -323,7 +323,7 @@ def ingest_process_event(payload: ProcessTelemetryCreate, identity: dict[str, st
         location=f"{payload.source}:{payload.line_id}:{payload.machine_id}",
         payload={**payload.model_dump(), "optimization": optimization},
     )
-    audit(identity["actor"], "ingest_process_event", payload.lot_id, True, {"event_hash": trace_event["event_hash"], "optimization": optimization})
+    audit(identity["actor"], identity["role"], "ingest_process_event", payload.lot_id, True, {"event_hash": trace_event["event_hash"], "optimization": optimization})
     return {"process_event": payload.model_dump(), "optimization": optimization, "trace_event": trace_event}
 
 
@@ -334,7 +334,7 @@ def predictive_quality(lot_id: str, identity: dict[str, str] = Depends(require_a
         inspections = [{**i, "features": json_loads(i["features_json"])} for i in conn.execute("SELECT * FROM inspections WHERE lot_id = ? ORDER BY id DESC", (lot_id,)).fetchall()]
         process_events = [{**e, "optimization": json_loads(e["optimization_json"])} for e in conn.execute("SELECT * FROM process_events WHERE lot_id = ? ORDER BY id DESC", (lot_id,)).fetchall()]
     result = predictive_quality_summary(inspections, process_events)
-    audit(identity["actor"], "predictive_quality", lot_id, True, result)
+    audit(identity["actor"], identity["role"], "predictive_quality", lot_id, True, result)
     return result
 
 
@@ -361,7 +361,7 @@ def validate_material_certification(payload: CertificationValidationRequest, ide
         location="Compliance Engine",
         payload={**payload.model_dump(), **validation},
     )
-    audit(identity["actor"], "validate_certification", payload.lot_id, validation["status"] == "VALIDATED", {"event_hash": trace_event["event_hash"], "standard": payload.standard})
+    audit(identity["actor"], identity["role"], "validate_certification", payload.lot_id, validation["status"] == "VALIDATED", {"event_hash": trace_event["event_hash"], "standard": payload.standard})
     return {"validation": validation, "trace_event": trace_event}
 
 
@@ -370,7 +370,7 @@ def get_compliance_report(lot_id: str, identity: dict[str, str] = Depends(requir
     require_role(identity, {"admin", "supply-chain-manager", "qa-engineer", "sustainability-analyst", "security-analyst"})
     passport = _build_passport(lot_id)
     report = compliance_report(lot_id, passport)
-    audit(identity["actor"], "read_compliance_report", lot_id, True, {"score": report["compliance_score_percent"]})
+    audit(identity["actor"], identity["role"], "read_compliance_report", lot_id, True, {"score": report["compliance_score_percent"]})
     return report
 
 
@@ -406,7 +406,7 @@ def ingest_threat_signal(payload: ThreatSignalCreate, identity: dict[str, str] =
                 location=payload.source,
                 payload={**payload.model_dump(), "analysis": analysis, "incident_id": incident_id},
             )
-    audit(identity["actor"], "ingest_threat_signal", payload.lot_id or "global", True, {"signal_id": signal_id, "incident_id": incident_id, "analysis": analysis})
+    audit(identity["actor"], identity["role"], "ingest_threat_signal", payload.lot_id or "global", True, {"signal_id": signal_id, "incident_id": incident_id, "analysis": analysis})
     return {"signal_id": signal_id, "incident_id": incident_id, "analysis": analysis, "trace_event": trace_event}
 
 
@@ -426,7 +426,7 @@ def get_diversification_strategy(material_type: str, current_region_risk: str = 
     if current_region_risk not in {"low", "medium", "high"}:
         raise HTTPException(status_code=400, detail="current_region_risk must be low, medium, or high")
     result = diversification_strategy(material_type, current_region_risk, single_source)
-    audit(identity["actor"], "diversification_strategy", material_type, True, result)
+    audit(identity["actor"], identity["role"], "diversification_strategy", material_type, True, result)
     return result
 
 
@@ -439,20 +439,41 @@ def create_incident(payload: IncidentCreate, identity: dict[str, str] = Depends(
             (payload.severity, payload.title, payload.description),
         )
         incident_id = cursor.lastrowid
-    audit(identity["actor"], "create_incident", str(incident_id), True, payload.model_dump())
+    audit(identity["actor"], identity["role"], "create_incident", str(incident_id), True, payload.model_dump())
     return {"incident_id": incident_id, "status": "OPEN", **payload.model_dump()}
 
 
 @app.get("/api/v1/security/audit")
-def list_audit_logs(limit: int = 50, identity: dict[str, str] = Depends(require_api_key)) -> dict[str, Any]:
-    require_role(identity, {"admin", "security-analyst"})
-    safe_limit = min(max(limit, 1), 200)
-    with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?", (safe_limit,)).fetchall()
-    return {"items": [{**r, "detail": json_loads(r["detail_json"])} for r in rows]}
+def list_audit_logs(
+    limit: int = 50,
+    identity: dict[str, str] = Depends(require_api_key)
+) -> dict[str, Any]:
 
+    require_role(identity, {"admin", "security-analyst"})
+
+    safe_limit = min(max(limit, 1), 200)
+
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?",
+            (safe_limit,)
+        ).fetchall()
+
+    items = []
+
+    for row in rows:
+        detail = json_loads(row["detail_json"])
+
+        items.append({
+            **row,
+            "detail": detail,
+            "role": identity["role"],
+            "status": "SUCCESS" if row["success"] else "FAILED"
+        })
+
+    return {"items": items}
 
 @app.get("/api/v1/blockchain/validate")
 def blockchain_validate(lot_id: str | None = None, identity: dict[str, str] = Depends(require_api_key)) -> dict[str, Any]:
-    audit(identity["actor"], "validate_chain", lot_id or "all", True, {})
+    audit(identity["actor"], identity["role"], "validate_chain", lot_id or "all", True, {})
     return validate_chain(lot_id)
