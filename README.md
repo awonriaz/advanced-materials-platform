@@ -1,8 +1,8 @@
 # AMSCP – Advanced Materials Supply Chain Platform
 
-**Topic 116:** Building a Comprehensive Advanced Materials Supply Chain Platform with AI-Driven Quality Control, Blockchain Traceability, and Sustainability Analytics for Strategic Industries.
+**Topic:** Building a Comprehensive Advanced Materials Supply Chain Platform with AI-Driven Quality Control, Blockchain Traceability, and Sustainability Analytics for Strategic Industries.
 
-This is a codebase from scratch that adds a strong synthetic QC dataset, stable TensorFlow/CV classification, complete runbook, Docker Compose, Kubernetes/Kind manifests, Hyperledger Fabric chaincode, optional Ethereum artifact, GitHub Actions, Spark ESG batch analytics, Ansible EC2 bootstrap, observability, and security documentation.
+This is a codebase that adds a strong synthetic QC dataset, stable TensorFlow/CV classification, complete runbook, Docker Compose, Kubernetes/Kind manifests, Hyperledger Fabric chaincode, optional Ethereum artifact, GitHub Actions, Spark ESG batch analytics, Ansible EC2 bootstrap, observability, and security documentation.
 
 The live demo path focuses on **FastAPI + TensorFlow QC + Elasticsearch + SQLite/hash-chain + Digital Material Passport**. Fabric, Kubernetes, Spark, MQTT/OPC-UA, PyTorch, and AWS are included as implementation evidence or staged enterprise paths where appropriate.
 
@@ -60,43 +60,7 @@ Run the complete exam workflow:
 bash scripts/run_level6_integration_demo.sh
 ```
 
-Compatibility wrappers are also included:
-
-```bash
-bash scripts/run_level6_integrations_demo.sh
-```
-
 ---
-
-## TensorFlow QC dataset and model
-
-The project includes a deterministic synthetic dataset for exam/training evidence. It is not a production-grade industrial inspection dataset.
-
-```text
-sample_data/images/train/good        24 images
-sample_data/images/train/defective   24 images
-sample_data/images/val/good           8 images
-sample_data/images/val/defective      8 images
-sample_data/images/test/good          8 images
-sample_data/images/test/defective     8 images
-sample_data/labels.csv
-```
-
-Persistent demo images:
-
-```text
-sample_data/demo/good_material_demo.png
-sample_data/demo/defective_material_demo.png
-sample_data/good_material.png
-sample_data/defective_material.png
-```
-
-Stable source files:
-
-```text
-sample_data/images/test/good/good_silicon_wafer_0102.png
-sample_data/images/test/defective/defective_titanium_alloy_0118.png
-```
 
 Training:
 
@@ -170,7 +134,7 @@ The core oral-exam demo uses the `full` profile. PyTorch, MQTT/OPC-UA, Spark, Ku
 
 ## Hyperledger Fabric
 
-Fabric is kept separate because it is heavier than the Docker API stack. Use it as the permissioned blockchain trust-layer demonstration.
+Fabric is kept separate because it is heavier than the Docker API stack. It is used as the permissioned blockchain trust-layer demonstration.
 
 ```bash
 export FABRIC_SAMPLES_DIR=/c/fabric-samples
@@ -219,10 +183,4 @@ data/carbon_events.csv
 Output groups CO2e, energy, water, and waste by `lot_id`.
 
 ---
-
-## Oral exam positioning
-
-Use this statement if asked why some services are optional:
-
-> The core live demo proves the integrated platform path with FastAPI, TensorFlow QC, Elasticsearch, SQLite/hash-chain, audit logs, ESG, risk, compliance, security, IoT, and Digital Material Passport. Hyperledger Fabric is demonstrated separately as the permissioned blockchain trust layer. Kubernetes, Spark, PyTorch, MQTT/OPC-UA, Ansible, and AWS are included as staged enterprise deployment evidence to avoid overloading an 8 GB exam machine while preserving the complete Level 6 architecture.
 
