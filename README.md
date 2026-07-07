@@ -41,7 +41,6 @@ GET  /api/v1/blockchain/validate
 cd amscp
 bash scripts/init_env.sh
 python scripts/generate_sample_qc_dataset.py --overwrite
-python scripts/prepare_demo_assets.py
 
 docker compose --profile full up -d --build
 ```
