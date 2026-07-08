@@ -116,9 +116,12 @@ defective_material_demo.png -> FAIL
 ## Docker Compose profiles
 
 ```bash
-# Full exam demo: API + TensorFlow QC + Elasticsearch + Prometheus
+# Full exam demo: API + TensorFlow QC + Elasticsearch
 bash scripts/init_env.sh
 docker compose --profile full up -d --build
+
+# Prometheus + Monitoring
+docker compose --profile full-plus up -d
 
 # Optional IoT broker
 CONFIG ONLY: docker compose --profile iot up -d
