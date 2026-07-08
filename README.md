@@ -56,7 +56,7 @@ curl http://127.0.0.1:9200
 Run the complete exam workflow:
 
 ```bash
-bash scripts/run_level6_integration_demo.sh
+bash scripts/run_level6_integrations_demo.sh
 ```
 
 ---
