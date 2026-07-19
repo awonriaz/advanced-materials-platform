@@ -222,7 +222,7 @@ Spark path demonstrates enterprise-scale ESG aggregation separately from the liv
 ```bash
 spark-submit analytics/spark_esg_batch.py data/carbon_events.csv
 ```
-
+  
 Explanation:
 
 - FastAPI ESG endpoint = live/demo event capture
@@ -270,8 +270,7 @@ Stop heavy Docker Compose services first if RAM is low:
 docker compose --profile full --profile full-plus --profile iot --profile pytorch down
 bash scripts/init_env.sh
 bash k8s/deploy-kind.sh
-kubectl -n amscp get pods -o wide
-kubectl -n amscp get svc
+kubectl -n amscp get all
 ```
 
 If port forwarding is needed:

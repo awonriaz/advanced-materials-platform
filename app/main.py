@@ -44,6 +44,56 @@ async def metrics_middleware(request, call_next):  # type: ignore[no-untyped-def
 def health() -> dict[str, str]:
     return {"status": "ok", "environment": settings.app_env}
 
+def _release_decision(passport: dict[str, Any]) -> dict[str, Any]:
+    quality = passport.get("quality", [])
+    risk = passport.get("risk", [])
+    sustainability = passport.get("sustainability", {})
+    threat_signals = passport.get("threat_signals", [])
+    chain_validation = passport.get("chain_validation", {})
+
+    latest_quality = quality[-1].get("result") if quality else "NOT_INSPECTED"
+    latest_risk = risk[0].get("level") if risk else "UNKNOWN"
+    esg_grade = sustainability.get("esg_grade", "UNKNOWN")
+    chain_valid = bool(chain_validation.get("valid"))
+
+    max_threat_score = 0
+    for signal in threat_signals:
+        action = signal.get("action", {})
+        score = action.get("threat_score", 0)
+        try:
+            max_threat_score = max(max_threat_score, int(score))
+        except Exception:
+            pass
+
+    reasons: list[str] = []
+
+    if latest_quality == "FAIL":
+        reasons.append("Latest quality inspection failed")
+
+    if latest_risk in {"HIGH", "CRITICAL"}:
+        reasons.append(f"Supply-chain risk level is {latest_risk}")
+
+    if esg_grade in {"D", "E"}:
+        reasons.append(f"ESG grade is {esg_grade}")
+
+    if max_threat_score >= 70:
+        reasons.append(f"Cybersecurity threat score is {max_threat_score}")
+
+    if not chain_valid:
+        reasons.append("Hash-chain validation failed")
+
+    if reasons:
+        return {
+            "status": "ON_HOLD",
+            "releasable": False,
+            "reasons": reasons,
+        }
+
+    return {
+        "status": "RELEASABLE",
+        "releasable": True,
+        "reasons": ["All release gates passed"],
+    }
 
 def _build_passport(lot_id: str) -> dict[str, Any]:
     with get_conn() as conn:
@@ -68,10 +118,15 @@ def _build_passport(lot_id: str) -> dict[str, Any]:
         "sustainability": lot_esg_summary(lot_id),
         "chain_validation": validate_chain(lot_id),
     }
-    passport["predictive_quality"] = predictive_quality_summary(passport["quality"], passport["process_telemetry"])
-    passport["compliance"] = compliance_report(lot_id, passport)
-    return passport
+    passport["predictive_quality"] = predictive_quality_summary(
+        passport["quality"],
+        passport["process_telemetry"],
+    )
 
+    passport["compliance"] = compliance_report(lot_id, passport)
+    passport["release_decision"] = _release_decision(passport)
+    return passport
+    
 
 @app.get("/metrics")
 def metrics() -> Response:
@@ -208,7 +263,7 @@ async def inspect_quality_with_tensorflow(lot_id: str, file: UploadFile = File(.
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=settings.tensorflow_timeout_seconds) as response:
             import json
             tf_result = json.loads(response.read().decode("utf-8"))
     except Exception as exc:

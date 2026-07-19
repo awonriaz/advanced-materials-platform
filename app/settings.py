@@ -53,6 +53,7 @@ class Settings:
     elasticsearch_timeout_seconds: int = int(os.getenv("ELASTICSEARCH_TIMEOUT_SECONDS", "3"))
     search_index: str = os.getenv("SEARCH_INDEX", "material-passports")
     tensorflow_qc_url: str = os.getenv("TENSORFLOW_QC_URL", "")
+    tensorflow_timeout_seconds: int = int(os.getenv("TENSORFLOW_TIMEOUT_SECONDS", "120"))
     mqtt_username: str = os.getenv("MQTT_USERNAME", "amscp_demo")
     mqtt_password: str = os.getenv("MQTT_PASSWORD", "")
 

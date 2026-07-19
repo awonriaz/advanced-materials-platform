@@ -368,10 +368,10 @@ p("Category"; .analysis.category),
 trace(.trace_event)
 '
 
-step "15) Create incident response record" "POST /api/v1/security/incidents"
+step "15) Create manual SOC follow-up incident response record" "POST /api/v1/security/incidents"
 RESP=$(post_json "/api/v1/security/incidents" "{
   \"severity\":\"HIGH\",
-  \"title\":\"Supplier portal compromise investigation\",
+  \"title\":\"Manual SOC follow-up for supplier portal compromise\",
   \"description\":\"Investigate supplier access logs and quarantine related evidence until cleared.\"
 }")
 show "$RESP" '
@@ -423,49 +423,69 @@ p("Hash-chain valid"; .chain_validation.valid),
 p("Hash-chain checked events"; .chain_validation.checked_events),
 p("Hash-chain error count"; ((.chain_validation.errors // []) | length)),
 p("Predictive quality"; .predictive_quality.prediction),
-p("Predictive action"; .predictive_quality.recommended_action)
+p("Predictive action"; .predictive_quality.recommended_action),
+p("Release status"; .release_decision.status),
+p("Releasable"; .release_decision.releasable),
+"Release reasons:",
+((.release_decision.reasons // [])[]? | "- " + .)
 '
 
 step "18) Sync passport to Elasticsearch" "POST /api/v1/search/sync/{lot_id}"
 RESP=$(curl -sS -X POST "$BASE_URL/api/v1/search/sync/$LOT_ID" "${HDR[@]}")
+
 show "$RESP" '
-p("Index"; .index_response._index),
-p("Document ID"; .index_response._id),
-p("Sync result"; .index_response.result),
-p("Shards successful"; .index_response._shards.successful),
-p("Indexed material type"; .document.material_type),
-p("Indexed supplier"; .document.supplier),
-p("Indexed origin country"; .document.origin_country),
-p("Indexed quality result"; .document.quality_result),
-p("Indexed risk level"; .document.risk_level),
-p("Indexed ESG grade"; .document.esg_grade)
+  p("Ensure index result"; .ensure_index.result),
+  p("Ensure index ok"; .ensure_index.ok),
+  p("Index"; .index_response._index),
+  p("Document ID"; .index_response._id),
+  p("Sync result"; .index_response.result),
+  p("Index error"; .index_response.error),
+  p("Shards successful"; .index_response._shards.successful),
+  p("Indexed lot ID"; .document.lot_id),
+  p("Indexed material type"; .document.material_type),
+  p("Indexed supplier"; .document.supplier),
+  p("Indexed origin country"; .document.origin_country),
+  p("Indexed quality result"; .document.quality_result),
+  p("Indexed risk level"; .document.risk_level),
+  p("Indexed ESG grade"; .document.esg_grade)
 '
+
+if [[ "$RAW_JSON" != "true" ]]; then
+  echo "$RESP" | jq -e '
+    (.index_response.result == "created")
+    or (.index_response.result == "updated")
+    or (.index_response._id != null)
+  ' >/dev/null || {
+    echo "[ERROR] Elasticsearch sync failed. Full response:"
+    echo "$RESP" | jq .
+    exit 1
+  }
+fi
+
 
 step "19) Search current material/passport in Elasticsearch" "GET /api/v1/search/materials"
 RESP=$(get_api "/api/v1/search/materials?q=$LOT_ID&size=3")
+
 show "$RESP" '
-if (.hits.hits? != null) then
-  p("Search hit count"; (.hits.total.value // (.hits.hits | length))),
-  (.hits.hits[]? |
-    "- Lot ID: " + (._id | tostring)
-    + " | Material: " + (._source.material_type // "N/A")
-    + " | Supplier: " + (._source.supplier // "N/A")
-    + " | Quality: " + (._source.quality_result // "N/A")
-    + " | Risk: " + (._source.risk_level // "N/A")
-    + " | ESG: " + (._source.esg_grade // "N/A"))
-elif (.results? != null) then
-  p("Search hit count"; (.results | length)),
-  (.results[]? |
-    "- Lot ID: " + (.lot_id // .id // "N/A")
-    + " | Material: " + (.material_type // "N/A")
-    + " | Supplier: " + (.supplier // "N/A")
-    + " | Quality: " + (.quality_result // "N/A")
-    + " | Risk: " + (.risk_level // "N/A")
-    + " | ESG: " + (.esg_grade // "N/A"))
-else
-  "Search endpoint returned successfully"
-end
+  if (.ok == false or .error? != null) then
+    p("Search error"; .error)
+  elif (.hits.hits? != null) then
+    p("Search hit count"; (.hits.total.value // (.hits.hits | length))),
+    (.hits.hits[]? | "- Lot ID: " + (._source.lot_id // ._id // "N/A") + " | Material: " + (._source.material_type // "N/A") + " | Supplier: " + (._source.supplier // "N/A") + " | Quality: " + (._source.quality_result // "N/A") + " | Risk: " + (._source.risk_level // "N/A") + " | ESG: " + (._source.esg_grade // "N/A"))
+  else
+    "Search endpoint returned but no Elasticsearch hits structure was found"
+  end
 '
+
+if [[ "$RAW_JSON" != "true" ]]; then
+  echo "$RESP" | jq -e --arg LOT_ID "$LOT_ID" '
+    (.hits.hits // []) | any((._source.lot_id == $LOT_ID) or (._id == $LOT_ID))
+  ' >/dev/null || {
+    echo "[ERROR] Elasticsearch search did not return the current LOT_ID. Full response:"
+    echo "$RESP" | jq .
+    exit 1
+  }
+fi
 
 step "20) Validate local SHA-256 hash-chain integrity" "GET /api/v1/blockchain/validate"
 RESP=$(get_api "/api/v1/blockchain/validate?lot_id=$LOT_ID")
